@@ -29,6 +29,7 @@ unsigned long stime,etime,dtime;
 void rc_init(void);
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
 void data_send(void);
+void show_battery_info();
 
 void rc_init(void)
 {
@@ -100,12 +101,13 @@ void data_send(void)
 void setup() {
 
   M5.begin();
-  M5.Lcd.fillScreen(RED);                           // 画面全体の塗りつぶし
-  M5.Lcd.setCursor(9, 10);                             // カーソル位置の指定
-  M5.Lcd.setTextFont(1);                              // フォントの指定
-  M5.Lcd.setTextSize(2);                              // フォントサイズを指定（倍数）
+  M5.Lcd.fillScreen(RED);       // 画面全体の塗りつぶし
+  M5.Lcd.setCursor(9, 10);      // カーソル位置の指定
+  M5.Lcd.setTextFont(1);        // フォントの指定
+  M5.Lcd.setTextSize(2);        // フォントサイズを指定（倍数）
   M5.Lcd.setTextColor(WHITE, RED);
-  M5.Lcd.println("AtomFly2.0");                        // 指定テキストの表示 
+  M5.Lcd.println("AtomFly2.0");           
+  for (uint8_t i=0;i<50;i++)show_battery_info();
   M5.IMU.Init();
   Wire.begin(0, 26);
   Wire1.begin(21, 22);
@@ -186,8 +188,10 @@ void loop() {
   byte rx_data[5];
   short _xstick,_ystick;
 
-  M5.update();
   stime = micros();
+
+  M5.update();
+  
   Wire.beginTransmission(0x54);//I2Cスレーブ「Arduino Uno」のデータ送信開始
   Wire.write(0x10);//x軸指定
   Wire.endTransmission();//I2Cスレーブ「Arduino Uno」のデータ送信終了
@@ -303,4 +307,29 @@ void loop() {
   dtime = etime - stime;
   delay((10000-dtime)/1000);
 
+}
+
+
+void show_battery_info(){
+  // バッテリー電圧表示
+  // GetVbatData()の戻り値はバッテリー電圧のステップ数で、
+  // AXP192のデータシートによると1ステップは1.1mV
+  double vbat = 0.0;
+  int8_t bat_charge_p = 0;
+
+  vbat = M5.Axp.GetBatVoltage();
+  M5.Lcd.setCursor(5, 100);
+  //M5.Lcd.setTextSize(1);
+  M5.Lcd.printf("Volt:\n %8.2fV", vbat);
+
+  // バッテリー残量表示
+  // 簡易的に、線形で4.2Vで100%、3.0Vで0%とする
+  bat_charge_p = int8_t((vbat - 3.0) / 1.2 * 100);
+  if(bat_charge_p > 100){
+    bat_charge_p = 100;
+  }else if(bat_charge_p < 0){
+    bat_charge_p = 0;
+  }
+  M5.Lcd.setCursor(5, 140);
+  M5.Lcd.printf("Charge:\n %8d%%", bat_charge_p);
 }
