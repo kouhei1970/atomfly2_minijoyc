@@ -112,6 +112,10 @@ void setup() {
   Ahrs.begin(100.0);
   rc_init();
   M5.Lcd.fillScreen(BLUE);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setTextColor(WHITE, BLUE);
+  M5.Lcd.println("Gyro calibration...");           
+
   for(int i=0;i<200;i++)
   {
     M5.IMU.getGyroData(&gyroX, &gyroY, &gyroZ);
@@ -126,12 +130,12 @@ void setup() {
 
   //Display init
   M5.Lcd.fillScreen(RED);       // 画面全体の塗りつぶし
-  M5.Lcd.setCursor(9, 10);      // カーソル位置の指定
+  //M5.Lcd.setCursor(9, 10);      // カーソル位置の指定
   M5.Lcd.setTextFont(1);        // フォントの指定
   M5.Lcd.setTextSize(2);        // フォントサイズを指定（倍数）
   M5.Lcd.setTextColor(WHITE, RED);
-  M5.Lcd.println("AtomFly2.0");           
-  for (uint8_t i=0;i<50;i++)show_battery_info();
+  //M5.Lcd.println("AtomFly2.0");           
+  //for (uint8_t i=0;i<50;i++)show_battery_info();
 
   byte error, address;
   int nDevices;
@@ -203,6 +207,7 @@ void setup() {
 
 char data[140];
 uint8_t senddata[11];
+uint8_t disp_counter=0;
 
 void loop() {
   byte rx_data[5];
@@ -221,7 +226,6 @@ void loop() {
     rx_data[0] = Wire.read();
     rx_data[1] = Wire.read();
     _xstick=rx_data[1]*256+rx_data[0];
-    xstick = _xstick - xstick_bias;
   }
 
   Wire.beginTransmission(0x54);//I2Cスレーブ「Arduino Uno」のデータ送信開始
@@ -233,8 +237,7 @@ void loop() {
     rx_data[2] = Wire.read();
     rx_data[3] = Wire.read();
     _ystick=rx_data[3]*256+rx_data[2];
-    ystick = _ystick - ystick_bias;
-
+    
   }
 
   Wire.beginTransmission(0x54);//I2Cスレーブ「Arduino Uno」のデータ送信開始
@@ -268,33 +271,21 @@ void loop() {
   float _theta = Ahrs.getRoll();//*DEG_TO_RAD;
   float _phi = Ahrs.getPitch();//*DEG_TO_RAD;
   float _psi = Ahrs.getYaw();//*DEG_TO_RAD;
-  
+
+  if(button==0)
+  {
+    Phi_bias = _phi;
+    Theta_bias = _theta;
+    Psi_bias = _psi;
+    xstick_bias = _xstick;
+    ystick_bias = _ystick;
+  }
+
+  xstick = _xstick - xstick_bias;
+  ystick = _ystick - ystick_bias;
   Phi = _phi - Phi_bias;
   Theta = _theta - Theta_bias;
   Psi = _psi - Psi_bias;
-
-  sprintf(data, "x:%4d y:%4d Phi: %7.3f Theta: %7.3f Psi: %7.3f Btn: %2d Delta:%6d\n", 
-    xstick, ystick, Phi, Theta, Psi, button, dtime);
-  Serial.print(data);
-
-  if(M5.BtnA.isPressed())
-  {
-    //M5.Lcd.fillScreen(BLUE);                           // 画面全体の塗りつぶし
-    //M5.Lcd.setCursor(9, 10);                             // カーソル位置の指定
-    //M5.Lcd.setTextFont(1);                              // フォントの指定
-    //M5.Lcd.setTextSize(2);                              // フォントサイズを指定（倍数）
-    //M5.Lcd.setTextColor(WHITE, BLUE);
-    M5.Lcd.println("AtomFly2.0");    
-  }
-
-  //M5.Lcd.setCursor(0, 0);                             // カーソル位置の指定
-  //M5.Lcd.println("AtomFly2.0");
-  //M5.Lcd.printf("X:%4d\n",xstick); 
-  //M5.Lcd.printf("Y:%4d\n",ystick);  
-  //M5.Lcd.printf("Phi:%5.1f\n",Phi);
-  //M5.Lcd.printf("Tht:%5.1f\n",Theta);
-  //M5.Lcd.printf("Psi:%5.1f\n",Psi);
-  //M5.Lcd.printf("Delta:%5d\n",dtime);
 
   senddata[0]=(unsigned short)(xstick)/256;
   senddata[1]=(unsigned short)(xstick)%256;
@@ -315,16 +306,69 @@ void loop() {
 
   esp_err_t result = esp_now_send(slave.peer_addr, senddata, sizeof(senddata));
 
-  if(button==0)
-  {
-    Phi_bias = _phi;
-    Theta_bias = _theta;
-    Psi_bias = _psi;
-    xstick_bias = _xstick;
-    ystick_bias = _ystick;
-    //show_battery_info();
-  }
   
+  //sprintf(data, "x:%4d y:%4d Phi: %7.3f Theta: %7.3f Psi: %7.3f Btn: %2d Delta:%6d\n", 
+  //  xstick, ystick, Phi, Theta, Psi, button, dtime);
+  //Serial.print(data);
+
+  if(M5.BtnA.isPressed())
+  {
+    //M5.Lcd.fillScreen(BLUE);                           // 画面全体の塗りつぶし
+    //M5.Lcd.setCursor(9, 10);                             // カーソル位置の指定
+    //M5.Lcd.setTextFont(1);                              // フォントの指定
+    //M5.Lcd.setTextSize(2);                              // フォントサイズを指定（倍数）
+    //M5.Lcd.setTextColor(WHITE, BLUE);
+    //M5.Lcd.println("AtomFly2.0");    
+  }
+
+  float vbat = M5.Axp.GetBatVoltage();
+  int8_t bat_charge_p = int8_t((vbat - 3.0) / 1.2 * 100);
+  
+  M5.Lcd.setCursor(2, 5+disp_counter*17);
+  switch (disp_counter)
+  {
+    case 0:
+      M5.Lcd.printf("AtomFly2.0");
+      break;
+    case 1:
+      M5.Lcd.printf("X:%4d",xstick);
+      break;
+    case 2:
+      M5.Lcd.printf("Y:%4d",ystick);
+      break;
+    case 3:
+      M5.Lcd.printf("Phi:%5.1f",Phi);
+      break;
+    case 4:
+      M5.Lcd.printf("Tht:%5.1f",Theta);
+      break;
+    case 5:
+      M5.Lcd.printf("Psi:%5.1f",Psi);
+      break;
+    case 6:
+      M5.Lcd.printf("FPS:%5.1f",1000000.0/dtime);
+      break;
+    case 7:
+      M5.Lcd.printf("Vlt:%4.1fV", vbat);
+      break;
+    case 8:
+      M5.Lcd.printf("Chg:%3d%%", bat_charge_p);
+      break;        
+  }
+  disp_counter++;
+  if(disp_counter==9)disp_counter=0;
+
+                    // カーソル位置の指定
+  //M5.Lcd.println("AtomFly2.0");
+  //M5.Lcd.printf("X:%4d\n",xstick); 
+  //M5.Lcd.printf("Y:%4d\n",ystick);  
+  //M5.Lcd.printf("Phi:%5.1f\n",Phi);
+  //M5.Lcd.printf("Tht:%5.1f\n",Theta);
+  //M5.Lcd.printf("Psi:%5.1f\n",Psi);
+  //M5.Lcd.printf("FPS:%5.1f\n",1000000.0/dtime);
+  //M5.Lcd.printf("Volt:\n %8.2fV\n", vbat);
+  //M5.Lcd.printf("Charge:\n %8d%%", bat_charge_p);
+
   if( M5.Axp.GetBtnPress() == 2 ){
     // 電源ボタンクリック
     //M5.Lcd.println("AtomFly2.0"); 
@@ -333,7 +377,7 @@ void loop() {
 
   etime = micros();
   dtime = etime - stime;
-  if((10000-dtime)>0)delay((10000-dtime)/1000);
+  //if((10000-dtime)>0)delay((10000-dtime)/1000);
 
 }
 
