@@ -261,12 +261,12 @@ void loop() {
 
   Ahrs.updateIMU(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
-  Ax = accX;
-  Ay = accY;
-  Az = accZ;
-  Wp = gyroX*DEG_TO_RAD;
-  Wq = gyroY*DEG_TO_RAD;
-  Wr = gyroZ*DEG_TO_RAD;
+  //Ax = accX;
+  //Ay = accY;
+  //Az = accZ;
+  //Wp = gyroX*DEG_TO_RAD;
+  //Wq = gyroY*DEG_TO_RAD;
+  //Wr = gyroZ*DEG_TO_RAD;
 
   float _theta = Ahrs.getRoll();//*DEG_TO_RAD;
   float _phi = Ahrs.getPitch();//*DEG_TO_RAD;
