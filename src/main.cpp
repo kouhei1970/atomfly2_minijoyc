@@ -259,7 +259,7 @@ void loop() {
   gyroY = gyroY - gyroY_bias;
   gyroZ = gyroZ - gyroZ_bias;
 
-  Ahrs.updateIMU(gyroX/*-Qbias*RAD_TO_DEG*/, gyroY/*-Pbias*RAD_TO_DEG*/, gyroZ/*-Rbias*RAD_TO_DEG*/, accX, accY, accZ);
+  Ahrs.updateIMU(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
   Ax = accX;
   Ay = accY;
