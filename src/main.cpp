@@ -352,17 +352,6 @@ void loop() {
   disp_counter++;
   if(disp_counter==9)disp_counter=0;
 
-                    // カーソル位置の指定
-  //M5.Lcd.println("AtomFly2.0");
-  //M5.Lcd.printf("X:%4d\n",xstick); 
-  //M5.Lcd.printf("Y:%4d\n",ystick);  
-  //M5.Lcd.printf("Phi:%5.1f\n",Phi);
-  //M5.Lcd.printf("Tht:%5.1f\n",Theta);
-  //M5.Lcd.printf("Psi:%5.1f\n",Psi);
-  //M5.Lcd.printf("FPS:%5.1f\n",1000000.0/dtime);
-  //M5.Lcd.printf("Volt:\n %8.2fV\n", vbat);
-  //M5.Lcd.printf("Charge:\n %8d%%", bat_charge_p);
-
   if( M5.Axp.GetBtnPress() == 2 ){
     // 電源ボタンクリック
     //M5.Lcd.println("AtomFly2.0"); 
@@ -387,13 +376,7 @@ void show_battery_info(){
   M5.Lcd.printf("Volt:\n %8.2fV", vbat);
 
   // バッテリー残量表示
-  // 簡易的に、線形で4.2Vで100%、3.0Vで0%とする
   bat_charge_p = int8_t((vbat - 3.0) / 1.2 * 100);
-  if(bat_charge_p > 100){
-    bat_charge_p = 100;
-  }else if(bat_charge_p < 0){
-    bat_charge_p = 0;
-  }
   M5.Lcd.setCursor(5, 140);
   M5.Lcd.printf("Charge:\n %8d%%", bat_charge_p);
 }
