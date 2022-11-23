@@ -261,13 +261,6 @@ void loop() {
 
   Ahrs.updateIMU(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
-  //Ax = accX;
-  //Ay = accY;
-  //Az = accZ;
-  //Wp = gyroX*DEG_TO_RAD;
-  //Wq = gyroY*DEG_TO_RAD;
-  //Wr = gyroZ*DEG_TO_RAD;
-
   float _theta = Ahrs.getRoll();//*DEG_TO_RAD;
   float _phi = Ahrs.getPitch();//*DEG_TO_RAD;
   float _psi = Ahrs.getYaw();//*DEG_TO_RAD;
@@ -306,7 +299,7 @@ void loop() {
 
   esp_err_t result = esp_now_send(slave.peer_addr, senddata, sizeof(senddata));
 
-  
+  //Out put to UART
   //sprintf(data, "x:%4d y:%4d Phi: %7.3f Theta: %7.3f Psi: %7.3f Btn: %2d Delta:%6d\n", 
   //  xstick, ystick, Phi, Theta, Psi, button, dtime);
   //Serial.print(data);
@@ -315,6 +308,7 @@ void loop() {
   {
   }
 
+  //Display information
   float vbat = M5.Axp.GetBatVoltage();
   int8_t bat_charge_p = int8_t((vbat - 3.0) / 1.2 * 100);
   
@@ -352,6 +346,7 @@ void loop() {
   disp_counter++;
   if(disp_counter==9)disp_counter=0;
 
+  //Reset
   if( M5.Axp.GetBtnPress() == 2 ){
     // 電源ボタンクリック
     //M5.Lcd.println("AtomFly2.0"); 
@@ -363,7 +358,6 @@ void loop() {
   //if((10000-dtime)>0)delay((10000-dtime)/1000);
 
 }
-
 
 void show_battery_info(){
   // バッテリー電圧表示
