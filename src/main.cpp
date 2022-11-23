@@ -302,10 +302,19 @@ void loop() {
     Psi_bias = _psi;
     xstick_bias = _xstick;
     ystick_bias = _ystick;
+    //show_battery_info();
   }
+
+  if( M5.Axp.GetBtnPress() == 2 ){
+    // 電源ボタンクリック
+    show_battery_info();
+    M5.Lcd.setCursor(5, 200);
+    M5.Lcd.printf("OK");
+  } 
+
   etime = micros();
   dtime = etime - stime;
-  delay((10000-dtime)/1000);
+  if((10000-dtime)>0)delay((10000-dtime)/1000);
 
 }
 
