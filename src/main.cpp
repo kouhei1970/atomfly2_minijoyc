@@ -313,12 +313,6 @@ void loop() {
 
   if(M5.BtnA.isPressed())
   {
-    //M5.Lcd.fillScreen(BLUE);                           // 画面全体の塗りつぶし
-    //M5.Lcd.setCursor(9, 10);                             // カーソル位置の指定
-    //M5.Lcd.setTextFont(1);                              // フォントの指定
-    //M5.Lcd.setTextSize(2);                              // フォントサイズを指定（倍数）
-    //M5.Lcd.setTextColor(WHITE, BLUE);
-    //M5.Lcd.println("AtomFly2.0");    
   }
 
   float vbat = M5.Axp.GetBatVoltage();
