@@ -111,6 +111,7 @@ void setup() {
   M5.IMU.Init();
   Ahrs.begin(100.0);
   rc_init();
+  M5.Axp.ScreenBreath(8);
   M5.Lcd.fillScreen(BLUE);
   M5.Lcd.setTextSize(2);
   M5.Lcd.setTextColor(WHITE, BLUE);
@@ -261,9 +262,9 @@ void loop() {
 
   Ahrs.updateIMU(gyroX, gyroY, gyroZ, accX, accY, accZ);
 
-  float _theta = Ahrs.getRoll();//*DEG_TO_RAD;
-  float _phi = Ahrs.getPitch();//*DEG_TO_RAD;
-  float _psi = Ahrs.getYaw();//*DEG_TO_RAD;
+  float _theta = Ahrs.getRoll()*DEG_TO_RAD;
+  float _phi = Ahrs.getPitch()*DEG_TO_RAD;
+  float _psi = Ahrs.getYaw()*DEG_TO_RAD;
 
   if(button==0)
   {
@@ -325,13 +326,13 @@ void loop() {
       M5.Lcd.printf("Y:%4d",ystick);
       break;
     case 3:
-      M5.Lcd.printf("Phi:%5.1f",Phi);
+      M5.Lcd.printf("Phi:%5.1f",Phi*180/3.14159);
       break;
     case 4:
-      M5.Lcd.printf("Tht:%5.1f",Theta);
+      M5.Lcd.printf("Tht:%5.1f",Theta*180/3.14159);
       break;
     case 5:
-      M5.Lcd.printf("Psi:%5.1f",Psi);
+      M5.Lcd.printf("Psi:%5.1f",Psi*180/3.14159);
       break;
     case 6:
       M5.Lcd.printf("FPS:%5.1f",1000000.0/dtime);
