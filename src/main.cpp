@@ -3,6 +3,9 @@
 #include <WiFi.h>
 #include <esp_now.h>
 
+#define ANGLECONTROL 0
+#define RATECONTROL 1
+
 Madgwick Ahrs;
 esp_now_peer_info_t slave;
 
@@ -25,10 +28,20 @@ short xstick_bias = 0.0;
 short ystick_bias = 0.0;
 short xstick=0;
 short ystick=0;
-short button=0;
+uint8_t button=0;
+uint8_t buttonA=0;
+uint8_t buttonB=0;
+uint8_t buttonB_cnt=0;
+uint8_t buttonB_pressed_flag=0;
+uint8_t Mode=ANGLECONTROL;
+
+
 unsigned long stime,etime,dtime;
 byte axp_cnt=0;
 
+char data[140];
+uint8_t senddata[13];
+uint8_t disp_counter=0;
 
 
 void rc_init(void);
@@ -206,10 +219,6 @@ void setup() {
 
 }
 
-char data[140];
-uint8_t senddata[11];
-uint8_t disp_counter=0;
-
 void loop() {
   byte rx_data[5];
   short _xstick,_ystick;
@@ -218,6 +227,36 @@ void loop() {
 
   M5.update();
   
+  if(M5.BtnA.isPressed())
+  {
+    buttonA = 1; 
+  }
+  else buttonA = 0;
+
+  if(M5.BtnB.isPressed())
+  {
+    buttonB = 1; 
+  }
+  else buttonB = 0;
+
+  if (buttonB==1)
+  {
+    buttonB_cnt++;
+    if (buttonB_cnt>10)buttonB_cnt=10;
+    buttonB_pressed_flag = 1;
+  }
+  else
+  {
+    if (buttonB_pressed_flag == 1)
+    {
+      if (Mode == ANGLECONTROL)Mode = RATECONTROL;
+      else Mode = ANGLECONTROL;
+      buttonB_pressed_flag = 0;
+    }
+    buttonB_cnt = 0;
+  }
+
+
   Wire.beginTransmission(0x54);//I2Cスレーブ「Arduino Uno」のデータ送信開始
   Wire.write(0x10);//x軸指定
   Wire.endTransmission();//I2Cスレーブ「Arduino Uno」のデータ送信終了
@@ -298,6 +337,10 @@ void loop() {
 
   senddata[10]=button;
 
+  senddata[11]=buttonA;
+
+  senddata[12]=Mode;
+
   esp_err_t result = esp_now_send(slave.peer_addr, senddata, sizeof(senddata));
 
   //Out put to UART
@@ -305,9 +348,6 @@ void loop() {
   //  xstick, ystick, Phi, Theta, Psi, button, dtime);
   //Serial.print(data);
 
-  if(M5.BtnA.isPressed())
-  {
-  }
 
   //Display information
   float vbat = M5.Axp.GetBatVoltage();
@@ -342,10 +382,15 @@ void loop() {
       break;
     case 8:
       M5.Lcd.printf("Chg:%3d%%", bat_charge_p);
-      break;        
+      break;
+    case 9:
+      disp_counter++;
+      M5.Lcd.setCursor(2, 5+disp_counter*17);
+      if( Mode==ANGLECONTROL )        M5.Lcd.printf("-STABILIZE-");
+      else if ( Mode == RATECONTROL ) M5.Lcd.printf("-ACRO-     ");
   }
   disp_counter++;
-  if(disp_counter==9)disp_counter=0;
+  if(disp_counter==11)disp_counter=0;
 
   //Reset
   if( M5.Axp.GetBtnPress() == 2 ){
