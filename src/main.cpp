@@ -1,3 +1,4 @@
+//Controller for AtomFly2
 #include <M5StickCPlus.h>
 #include <MadgwickAHRS.h>
 #include <WiFi.h>
@@ -7,7 +8,8 @@
 #define RATECONTROL 1
 
 Madgwick Ahrs;
-esp_now_peer_info_t slave;
+
+esp_now_peer_info_t peerInfo;
 
 float accX = 0.0F;
 float accY = 0.0F;
@@ -40,12 +42,15 @@ unsigned long stime,etime,dtime;
 byte axp_cnt=0;
 
 char data[140];
-uint8_t senddata[13];
+uint8_t senddata[15];
 uint8_t disp_counter=0;
+
+//AtomFlyのMAC ADDRESS E8:9F:6D:06:D3:A0
+const uint8_t addr[6] = {0xE8, 0x9F, 0x6D, 0x06, 0xD3, 0xA0};
 
 
 void rc_init(void);
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
+//void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
 void data_send(void);
 void show_battery_info();
 
@@ -60,29 +65,20 @@ void rc_init(void)
     Serial.println("ESPNow Init Failed");
     ESP.restart();
   }
-#if 1
-  // マルチキャスト用Slave登録
-  memset(&slave, 0, sizeof(slave));
-  for (int i = 0; i < 6; ++i) {
-    slave.peer_addr[i] = (uint8_t)0xff;
-  }
-  
-  esp_err_t addStatus = esp_now_add_peer(&slave);
-  if (addStatus == ESP_OK) {
-    // Pair success
-    Serial.println("Pair success");
-  }
-  // ESP-NOWコールバック登録
-  esp_now_register_send_cb(OnDataSent);
-  //esp_now_register_recv_cb(OnDataRecv);
 
-    // Ps3.attach(notify);
-    // Ps3.attachOnConnect(onConnect);
-    // Ps3.begin(BTID);
-    Serial.println("Ready.");
-  #endif
+  //ペアリング
+  memcpy(peerInfo.peer_addr, addr, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) 
+  {
+        Serial.println("Failed to add peer");
+        return;
+  }
+
 }
 
+#if 0
 // 送信コールバック
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   //char macStr[18];
@@ -93,6 +89,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   //Serial.print("Last Packet Send Status: ");
   //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
+
 
 void data_send(void)
 {
@@ -115,13 +112,78 @@ void data_send(void)
   //  Serial.println("Not sure what happened");
   //}  
 }
+#endif
+
+uint8_t mpu6886_byte_read(uint8_t reg_addr)
+{
+  uint8_t data;
+  Wire1.beginTransmission (MPU6886_ADDRESS);
+  Wire1.write(reg_addr);
+  Wire1.endTransmission();
+  Wire1.requestFrom(MPU6886_ADDRESS, 1);
+  data = Wire1.read();
+  return data;
+}
+
+void mpu6886_byte_write(uint8_t reg_addr, uint8_t data)
+{
+  Wire1.beginTransmission (MPU6886_ADDRESS);
+  Wire1.write(reg_addr);
+  Wire1.write(data);
+  Wire1.endTransmission();
+}
+
+void imu_init(void)
+{
+  uint8_t data;
+  const uint8_t filter_config = 3;
+  //Cutoff frequency
+  //filter_config Gyro Accel
+  //0 250    218.1
+  //1 176    218.1
+  //2 92     99.0
+  //3 41     44.8
+  //4 20     21.2
+  //5 10     10.2
+  //6 5      5.1
+  //7 3281   420.0
+
+  M5.IMU.Init();
+  //IMUのデフォルトI2C周波数が100kHzなので400kHzに上書き
+  Wire1.begin(25,21,400000UL);
+
+  //Gyro
+  //F_CHOICE_B
+  data = mpu6886_byte_read(MPU6886_GYRO_CONFIG);
+  Serial.printf("GYRO_CONFIG %d\r\n", data);
+  mpu6886_byte_write(MPU6886_GYRO_CONFIG, data & 0b11111100);
+  data = mpu6886_byte_read(MPU6886_GYRO_CONFIG);
+  Serial.printf("Update GYRO_CONFIG %d\r\n", data);
+
+  //DLPG_CFG
+  data = mpu6886_byte_read(MPU6886_CONFIG);
+  Serial.printf("CONFIG %d\r\n", data);
+  mpu6886_byte_write(MPU6886_CONFIG, (data&0b11111100)|filter_config);
+  data = mpu6886_byte_read(MPU6886_CONFIG);
+  Serial.printf("Update CONFIG %d\r\n", data);
+
+  //Accel
+  //ACCEL_FCHOCE_B & A_DLPF_CFG
+  data = mpu6886_byte_read(MPU6886_ACCEL_CONFIG2);
+  Serial.printf("ACCEL_CONFIG2 %d\r\n", data);
+  mpu6886_byte_write(MPU6886_ACCEL_CONFIG2, (data & 0b11110111) | filter_config);
+  data = mpu6886_byte_read(MPU6886_ACCEL_CONFIG2);
+  Serial.printf("Update ACCEL_CONFIG2 %d\r\n", data);
+}
 
 void setup() {
 
   M5.begin();
   Wire.begin(0, 26);
   Wire1.begin(21, 22);
-  M5.IMU.Init();
+  //M5.IMU.Init();
+  imu_init();
+
   Ahrs.begin(100.0);
   rc_init();
   M5.Axp.ScreenBreath(8);
@@ -320,28 +382,35 @@ void loop() {
   Theta = _theta - Theta_bias;
   Psi = _psi - Psi_bias;
 
-  senddata[0]=(unsigned short)(xstick)/256;
-  senddata[1]=(unsigned short)(xstick)%256;
+  uint8_t* d_int;
+  
+  d_int = (uint8_t*)&xstick;
+  senddata[0]=d_int[0];
+  senddata[1]=d_int[1];
 
-  senddata[2]=(unsigned short)(ystick)/256;
-  senddata[3]=(unsigned short)(ystick)%256;
+  d_int = (uint8_t*)&ystick;
+  senddata[2]=d_int[0];
+  senddata[3]=d_int[1];
 
-  senddata[4]=(unsigned short)(Phi*1000)/256;
-  senddata[5]=(unsigned short)(Phi*1000)%256;
+  d_int = (uint8_t*)&Phi;
+  senddata[4]=d_int[0];
+  senddata[5]=d_int[1];
+  senddata[6]=d_int[2];
+  senddata[7]=d_int[3];
 
-  senddata[6]=(unsigned short)(Theta*1000)/256;
-  senddata[7]=(unsigned short)(Theta*1000)%256;
+  d_int = (uint8_t*)&Theta;
+  senddata[8]=d_int[0];
+  senddata[9]=d_int[1];
+  senddata[10]=d_int[2];
+  senddata[11]=d_int[3];
 
-  senddata[8]=(short)(Psi*1000)/256;
-  senddata[9]=(short)(Psi*1000)%256;
+  senddata[12]=button;
 
-  senddata[10]=button;
+  senddata[13]=buttonA;
 
-  senddata[11]=buttonA;
+  senddata[14]=Mode;
 
-  senddata[12]=Mode;
-
-  esp_err_t result = esp_now_send(slave.peer_addr, senddata, sizeof(senddata));
+  esp_err_t result = esp_now_send(peerInfo.peer_addr, senddata, sizeof(senddata));
 
   //Out put to UART
   //sprintf(data, "x:%4d y:%4d Phi: %7.3f Theta: %7.3f Psi: %7.3f Btn: %2d Delta:%6d\n", 
