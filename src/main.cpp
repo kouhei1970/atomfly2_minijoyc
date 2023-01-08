@@ -136,7 +136,7 @@ void mpu6886_byte_write(uint8_t reg_addr, uint8_t data)
 void imu_init(void)
 {
   uint8_t data;
-  const uint8_t filter_config = 2;
+  const uint8_t filter_config = 3;
   //Cutoff frequency
   //filter_config Gyro Accel
   //0 250    218.1
