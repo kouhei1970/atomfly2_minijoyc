@@ -150,7 +150,7 @@ void imu_init(void)
 
   M5.IMU.Init();
   //IMUのデフォルトI2C周波数が100kHzなので400kHzに上書き
-  Wire1.begin(25,21,400000UL);
+  Wire1.begin(21,22,400000UL);
 
   //Gyro
   //F_CHOICE_B
