@@ -1,11 +1,14 @@
 //Controller for AtomFly2
 #include <M5StickCPlus.h>
-#include <MadgwickAHRS.h>
 #include <WiFi.h>
 #include <esp_now.h>
+#include "MadgwickAHRS.h"
+
 
 #define ANGLECONTROL 0
 #define RATECONTROL 1
+#define ANGLECONTROL_W_LOG 2
+#define RATECONTROL_W_LOG 3
 
 Madgwick Ahrs;
 
@@ -45,7 +48,8 @@ char data[140];
 uint8_t senddata[15];
 uint8_t disp_counter=0;
 
-//AtomFlyのMAC ADDRESS E8:9F:6D:06:D3:A0
+//Kouhei AtomFlyのMAC ADDRESS E8:9F:6D:06:D3:A0
+//B MAC ADDRESS E8:9F:6D:07:B4:84
 const uint8_t addr[6] = {0xE8, 0x9F, 0x6D, 0x06, 0xD3, 0xA0};
 
 
@@ -311,8 +315,10 @@ void loop() {
   {
     if (buttonB_pressed_flag == 1)
     {
-      if (Mode == ANGLECONTROL)Mode = RATECONTROL;
-      else Mode = ANGLECONTROL;
+      Mode+=1;
+      if(Mode>3)Mode=0;
+      //if (Mode == ANGLECONTROL)Mode = RATECONTROL;
+      //else Mode = ANGLECONTROL;
       buttonB_pressed_flag = 0;
     }
     buttonB_cnt = 0;
@@ -455,8 +461,11 @@ void loop() {
     case 9:
       disp_counter++;
       M5.Lcd.setCursor(2, 5+disp_counter*17);
-      if( Mode==ANGLECONTROL )        M5.Lcd.printf("-STABILIZE-");
-      else if ( Mode == RATECONTROL ) M5.Lcd.printf("-ACRO-     ");
+      if( Mode == ANGLECONTROL )            M5.Lcd.printf("-STABILIZE-");
+      else if ( Mode == RATECONTROL )       M5.Lcd.printf("-ACRO-     ");
+      else if ( Mode == ANGLECONTROL_W_LOG) M5.Lcd.printf("-STABILIZE.L-");
+      else if ( Mode == RATECONTROL_W_LOG ) M5.Lcd.printf("-ACRO.L-     ");
+
   }
   disp_counter++;
   if(disp_counter==11)disp_counter=0;
@@ -471,7 +480,6 @@ void loop() {
   etime = micros();
   dtime = etime - stime;
   //if((10000-dtime)>0)delay((10000-dtime)/1000);
-
 }
 
 void show_battery_info(){
